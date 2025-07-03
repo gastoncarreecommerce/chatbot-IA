@@ -40,6 +40,7 @@ Tu respuesta debe ser útil, clara y amable.
 Devolvé solo un JSON como este:
 {
   "respuesta": "Frase conversacional para el usuario",
+  "receta": "Receta simple y rica"
   "ingredientes": ["ingrediente1", "ingrediente2", "ingrediente3"]
 }
 
