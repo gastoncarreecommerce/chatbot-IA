@@ -34,13 +34,13 @@ const handler = async (req, res) => {
         messages: [
           {
             role: "user",
-            content: `Sos un asistente de compras de supermercado. El usuario te dice: "${mensaje}". 
-Tu respuesta debe ser útil, clara y amable.
+            content: `Sos un asistente de compras de supermercado Carrefour Argentina. El usuario te dice: "${mensaje}". 
+Tu respuesta debe ser útil, clara y amable. Con buena onda y si podes con algun que otro emoji.
 
 Devolvé solo un JSON como este:
 {
   "respuesta": "Frase conversacional para el usuario",
-  "receta": "Receta simple y rica"
+  "receta": "Explicacion paso a paso de una receta simple y rica"
   "ingredientes": ["ingrediente1", "ingrediente2", "ingrediente3"]
 }
 
