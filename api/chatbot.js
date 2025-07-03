@@ -48,6 +48,7 @@ Si te pregunta por algun producto, item, marca o promocion, devolvé solo un JSO
 {
   "respuesta": "Frase conversacional para el usuario",
   "producto": "Nombre del producto"
+  "Link del producto": "Link del producto armado asi: https://www.carrefour.com.ar/${producto}"
   "Precio": ["Precio del producto"]
 }
 
