@@ -1,5 +1,3 @@
-// File: api/chatbot.js
-
 const allowCors = (handler) => async (req, res) => {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -18,29 +16,32 @@ const handler = async (req, res) => {
     }
 
     const systemPrompt = `
-Sos el Asistente Carrefour Argentina. Respondé con un JSON plano y sin explicación, solo con estos campos:
-
+Sos el Asistente Carrefour Argentina. Respondé solo con un JSON plano con:
 - "tipo": uno de ["productos", "recetas", "ayuda"]
-- "respuesta": frase simpática para el usuario
-- Si tipo = "productos": devolvé también "query": con el término buscado (ej: "arroz")
-- Si tipo = "recetas": devolvé "receta": texto y "ingredientes": array
-- Si tipo = "ayuda": devolvé "info": texto
+- "respuesta": texto simpático con emojis
 
-Ejemplos de usuario y cómo responder:
-- "ofertas de leche" → tipo: "productos", query: "leche"
-- "quiero hacer una tarta" → tipo: "recetas"
-- "hola" o "qué podés hacer" → tipo: "ayuda"
-- JAMÁS devuelvas texto fuera del JSON ni uses markdown.
+Si tipo = "productos", agregá también "query": string
+Si tipo = "recetas", agregá "receta": texto y "ingredientes": array
+Si tipo = "ayuda", podés agregar "info": texto útil
+
+NO EXPLIQUES NADA. NO agregues texto antes ni después. SOLO el JSON.
+Ejemplo:
+
+{
+  "tipo": "productos",
+  "respuesta": "¡Mirá estas opciones! 🛒",
+  "query": "leche"
+}
 `;
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "openrouter/cypher-alpha:free",
+        model: "openai/gpt-3.5-turbo", // Modelo más confiable
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: mensaje }
@@ -50,22 +51,39 @@ Ejemplos de usuario y cómo responder:
 
     const data = await response.json();
     let content = data.choices?.[0]?.message?.content?.trim();
-    if (!content) return res.status(500).json({ error: "Respuesta vacía de IA" });
 
-    if (content.startsWith("```json")) {
-      content = content.replace(/^```json/, "").replace(/```$/, "").trim();
+    if (!content) {
+      return res.status(200).json({
+        tipo: "ayuda",
+        info: "Soy tu asistente Carrefour. Podés pedirme productos, recetas o promociones 😊"
+      });
     }
 
-    let json;
+    // Limpiar bloque ```json si lo hay
+    content = content.replace(/^```json/, '').replace(/```$/, '').trim();
+
+    let parsed;
     try {
-      json = JSON.parse(content);
+      parsed = JSON.parse(content);
     } catch (e) {
-      return res.status(500).json({ error: "No se pudo parsear JSON", raw: content });
+      console.warn("Falla al parsear. Respuesta original:", content);
+      return res.status(200).json({
+        tipo: "ayuda",
+        info: "Podés buscar productos, pedir una receta o consultar promociones 🛒"
+      });
     }
 
-    return res.status(200).json(json);
+    // Validación mínima
+    if (!parsed.tipo || (!parsed.respuesta && !parsed.info)) {
+      return res.status(200).json({
+        tipo: "ayuda",
+        info: "Estoy acá para ayudarte. ¿Querés buscar productos, recetas o promos? 😊"
+      });
+    }
+
+    return res.status(200).json(parsed);
   } catch (err) {
-    console.error(err);
+    console.error("Error en chatbot:", err);
     return res.status(500).json({ error: "Error interno", detalle: err.message });
   }
 };
