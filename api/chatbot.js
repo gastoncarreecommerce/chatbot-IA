@@ -1,8 +1,5 @@
 // File: api/chatbot.js
 
-/**
- * CORS middleware para que tu widget DY pueda llamar al endpoint
- */
 const allowCors = (handler) => async (req, res) => {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -12,9 +9,6 @@ const allowCors = (handler) => async (req, res) => {
   return handler(req, res);
 };
 
-/**
- * Handler principal: recibe { mensaje } y devuelve JSON según intención
- */
 const handler = async (req, res) => {
   try {
     const { mensaje } = req.body;
@@ -23,17 +17,21 @@ const handler = async (req, res) => {
     if (!apiKey)  return res.status(500).json({ error: 'OPENROUTER_API_KEY no configurada.' });
 
     const systemPrompt = `
-Sos el Asistente Inteligente de Compras Carrefour Argentina.  
-Detectá la intención y devolvé SIEMPRE un JSON plano con:
-1) "tipo": uno de ["productos","promociones","recetas","ayuda"]
-2) "respuesta": frase amigable (puede llevar emoji)
-3) Solo uno de estos bloques según tipo:
+Sos el Asistente Inteligente de Compras Carrefour Argentina.
+Tu misión: ayudar a usuarios en www.carrefour.com.ar a encontrar productos, ofertas, recetas, info útil, y guiarlos en lo que necesiten.
+
+RESPONDE SIEMPRE con un JSON plano con:
+- "tipo": uno de ["productos","promociones","recetas","ayuda"]
+- "respuesta": frase conversacional (cordial, simpática, personalizada, puede llevar emoji)
+- Según tipo, incluye SOLO uno de estos bloques:
   - productos: array "productos" de { nombre, sku, link, precio, imagen }
   - promociones: array "promociones" de { titulo, descripcion, vigencia, link }
   - recetas: campos "receta" (texto) e "ingredientes" (array de strings)
-  - ayuda: campo "info" (texto con la ayuda solicitada)
-IMPORTANTE: NO agregues nada fuera del JSON, ni markdown, ni comentarios.
-Si no entendés, devolvé tipo:"ayuda" con info genérica sobre qué podés hacer.
+  - ayuda: campo "info" (texto claro sobre cómo puedo ayudarte)
+**ATENCIÓN:**  
+- Si el usuario solo te saluda ("hola", "buenas", "¿qué puedes hacer?", etc.), respondé con tipo:"ayuda" e info breve de todo lo que podés hacer, de forma amigable.
+- Si no entendés la solicitud, respondé tipo:"ayuda" y ofrece ejemplos: "Podés buscar productos, pedir ofertas, o consultar recetas 🙂".
+- JAMÁS devuelvas texto fuera del JSON ni comentarios.
 `;
 
     const orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
