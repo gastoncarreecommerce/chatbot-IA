@@ -1,9 +1,14 @@
 const allowCors = (handler) => async (req, res) => {
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') return res.status(200).end();
+  res.setHeader("Access-Control-Allow-Credentials", true);
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    res.status(200).end();
+    return;
+  }
+
   return handler(req, res);
 };
 
@@ -16,65 +21,60 @@ const handler = async (req, res) => {
   }
 
   try {
-    const systemPrompt = `
-Sos un asistente de compras inteligente de Carrefour Argentina. El usuario puede pedirte:
-
-- Productos (ej: "leche", "arroz", "detergente magistral")
-- Promociones (ej: "ofertas de arroz", "tienen promos de lavandina?")
-- Recetas (ej: "que puedo cocinar con carne picada?", "receta con arroz y pollo")
-- Ayuda general (ej: "hola", "qué puedes hacer?")
-
-Siempre respondé en formato JSON puro. Elegí SOLO UNO de estos tipos y respondé según el caso:
-
-// Receta:
-{
-  "tipo": "receta",
-  "respuesta": "¡Claro! Podés preparar esta receta...",
-  "receta": "Paso a paso de la receta",
-  "ingredientes": ["arroz", "pollo", "cebolla"]
-}
-
-// Producto:
-{
-  "tipo": "producto",
-  "respuesta": "Mirá este producto que encontré:",
-  "producto": "Leche La Serenísima",
-  "link": "https://www.carrefour.com.ar/leche-la-serenisima/p",
-  "precio": "$799"
-}
-
-// Promo:
-{
-  "tipo": "promocion",
-  "respuesta": "Encontré una promo buenísima 😊",
-  "producto": "Arroz Dos Hermanos 1kg",
-  "link": "https://www.carrefour.com.ar/arroz-dos-hermanos-1kg/p",
-  "precio": "$499"
-}
-
-// Ayuda:
-{
-  "tipo": "ayuda",
-  "info": "Soy tu asistente Carrefour. Podés pedirme productos, recetas o promociones 😊"
-}
-
-IMPORTANTE:
-- No agregues texto fuera del JSON.
-- NO EXPLIQUES nada.
-- El mensaje del usuario es: """${mensaje}"""
-`;
-
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: 'deepseek/deepseek-r1-0528-qwen3-8b:free',
+        model: "microsoft/mai-ds-r1:free",
+        max_tokens: 1800,
+        temperature: 0.7,
         messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: mensaje }
+          {
+            role: "system",
+            content: `Sos un chatbot inteligente de Carrefour Argentina. Ayudás a los usuarios a:
+
+1. Buscar productos o marcas en el supermercado.
+2. Consultar ofertas o promociones específicas.
+3. Sugerir recetas con ingredientes y pasos.
+4. Brindar asistencia general (cómo comprar, dónde encontrar algo, qué hacer si tienen dudas).
+
+Respondé siempre con buena onda, tono humano, y si podés usá emojis 🙂
+
+IMPORTANTE:
+- Si el usuario pide una receta o idea para cocinar, devolvé un JSON así:
+{
+  "respuesta": "Frase inicial al usuario",
+  "receta": "Nombre de la receta o explicación",
+  "ingredientes": ["leche", "harina", "huevo"]
+}
+
+- Si el usuario pide un producto, marca o categoría, devolvé:
+{
+  "respuesta": "Frase inicial al usuario",
+  "producto": "arroz" // o el término a buscar en VTEX
+}
+
+- Si el usuario pregunta por ofertas o promociones, devolvé:
+{
+  "respuesta": "Frase amable + aclaración de que se mostrarán ofertas",
+  "promocion": "arroz" // término clave
+}
+
+- Si el usuario pregunta qué podés hacer, devolvé:
+{
+  "respuesta": "Frase que enumera lo que podés hacer"
+}
+
+NO EXPLIQUES NADA FUERA DEL JSON. NO AGREGUES COMILLAS TRIPLES, NI texto adicional. SOLO DEVOLVÉ JSON plano.
+`
+          },
+          {
+            role: "user",
+            content: mensaje
+          }
         ]
       })
     });
@@ -82,7 +82,9 @@ IMPORTANTE:
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
 
-    if (!content) return res.status(500).json({ error: "Sin respuesta", detalle: data });
+    if (!content) {
+      return res.status(500).json({ error: "No se generó respuesta", detalle: data });
+    }
 
     let raw = content.trim();
     if (raw.startsWith("```json")) {
@@ -93,11 +95,11 @@ IMPORTANTE:
       const json = JSON.parse(raw);
       return res.status(200).json(json);
     } catch (e) {
-      return res.status(500).json({ error: "JSON inválido", raw });
+      return res.status(500).json({ error: "Respuesta inválida de la IA", raw });
     }
 
   } catch (err) {
-    return res.status(500).json({ error: "Error interno", detalle: err.message });
+    return res.status(500).json({ error: "Error al consultar la IA", detalle: err.message });
   }
 };
 
