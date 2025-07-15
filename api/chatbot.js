@@ -71,7 +71,7 @@ IMPORTANTE:
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model: 'deepseek/deepseek-r1-0528-qwen3-8b:free',
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: mensaje }
