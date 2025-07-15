@@ -28,7 +28,7 @@ const handler = async (req, res) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "nvidia/llama-3.1-nemotron-ultra-253b-v1:free",
+        model: "meta-llama/llama-3.2-11b-vision-instruct:free",
         messages: [
           {
             role: "system",
