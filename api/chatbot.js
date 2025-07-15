@@ -28,7 +28,7 @@ const handler = async (req, res) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "qwen/qwen3-4b:free",
+        model: "Promedio final: 62",
         messages: [
           {
             role: "system",
