@@ -28,7 +28,7 @@ const handler = async (req, res) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "meta-llama/llama-3.2-11b-vision-instruct:free",
+        model: "moonshotai/kimi-k2:free",
         messages: [
           {
             role: "system",
