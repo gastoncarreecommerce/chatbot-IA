@@ -28,7 +28,7 @@ const handler = async (req, res) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "Promedio final: 62",
+        model: "agentica-org/deepcoder-14b-preview:free",
         messages: [
           {
             role: "system",
