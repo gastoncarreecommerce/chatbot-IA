@@ -28,7 +28,7 @@ const handler = async (req, res) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "microsoft/mai-ds-r1:free",
+        model: "mistralai/mistral-7b-instruct:free",
         messages: [
           {
             role: "system",
