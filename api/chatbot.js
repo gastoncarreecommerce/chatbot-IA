@@ -1,5 +1,5 @@
 const allowCors = (handler) => async (req, res) => {
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -8,104 +8,70 @@ const allowCors = (handler) => async (req, res) => {
 };
 
 const handler = async (req, res) => {
+  const { mensaje } = req.body;
+  const apiKey = process.env.OPENROUTER_API_KEY;
+
+  if (!mensaje || !apiKey) {
+    return res.status(400).json({ error: "Falta mensaje o API Key" });
+  }
+
   try {
-    const { mensaje } = req.body;
-    const apiKey = process.env.OPENROUTER_API_KEY;
-    if (!mensaje || !apiKey) {
-      return res.status(400).json({ error: 'Falta mensaje o API Key' });
-    }
-
     const systemPrompt = `
-Sos el Asistente de Compras Carrefour Argentina, integrado en el sitio web oficial www.carrefour.com.ar. 
-Tu objetivo es ayudar a los usuarios de forma rápida, clara y efectiva, devolviendo SIEMPRE un JSON plano y estructurado según el tipo de consulta del usuario.
+Sos un asistente de compras inteligente de Carrefour Argentina. El usuario puede pedirte:
 
-⚠️ NORMAS OBLIGATORIAS:
-- NO respondas en lenguaje natural.
-- NO expliques nada.
-- NO agregues ningún texto fuera del JSON.
-- NO uses markdown (ni bloques de código, ni comillas invertidas).
-- El JSON debe estar bien formado, sin comentarios ni texto adicional.
+- Productos (ej: "leche", "arroz", "detergente magistral")
+- Promociones (ej: "ofertas de arroz", "tienen promos de lavandina?")
+- Recetas (ej: "que puedo cocinar con carne picada?", "receta con arroz y pollo")
+- Ayuda general (ej: "hola", "qué puedes hacer?")
 
-✅ FORMATO DE RESPUESTA:
-Debés devolver un objeto con la siguiente estructura:
+Siempre respondé en formato JSON puro. Elegí SOLO UNO de estos tipos y respondé según el caso:
 
+// Receta:
 {
-  "tipo": "productos" | "recetas" | "ayuda",
-  "respuesta": "frase cálida, simpática y contextual (con emojis si querés)",
-  OPCIONAL SEGÚN TIPO:
-  - si tipo == "productos": agregar "query": string
-  - si tipo == "recetas": agregar "receta": string, "ingredientes": [array de strings]
-  - si tipo == "ayuda": agregar "info": string (guía sobre qué puede hacer el bot)
+  "tipo": "receta",
+  "respuesta": "¡Claro! Podés preparar esta receta...",
+  "receta": "Paso a paso de la receta",
+  "ingredientes": ["arroz", "pollo", "cebolla"]
 }
 
----
-
-🎯 EJEMPLOS CLAROS Y REALES:
-
-💬 Usuario: hola  
-👉 Respuesta:
+// Producto:
 {
-  "tipo": "ayuda",
-  "respuesta": "¡Hola! 👋 Soy tu asistente Carrefour.",
-  "info": "Puedo ayudarte a buscar productos, encontrar ofertas o sugerirte recetas fáciles con ingredientes que tengas en casa."
+  "tipo": "producto",
+  "respuesta": "Mirá este producto que encontré:",
+  "producto": "Leche La Serenísima",
+  "link": "https://www.carrefour.com.ar/leche-la-serenisima/p",
+  "precio": "$799"
 }
 
-💬 Usuario: ofertas de arroz  
-👉 Respuesta:
+// Promo:
 {
-  "tipo": "productos",
-  "respuesta": "¡Mirá estas ofertas de arroz! 🛒",
-  "query": "arroz"
+  "tipo": "promocion",
+  "respuesta": "Encontré una promo buenísima 😊",
+  "producto": "Arroz Dos Hermanos 1kg",
+  "link": "https://www.carrefour.com.ar/arroz-dos-hermanos-1kg/p",
+  "precio": "$499"
 }
 
-💬 Usuario: necesito detergente magistral  
-👉 Respuesta:
-{
-  "tipo": "productos",
-  "respuesta": "¡Acá te muestro lo que encontré sobre detergente Magistral! 🧽",
-  "query": "detergente magistral"
-}
-
-💬 Usuario: qué puedo cocinar con arroz y huevo  
-👉 Respuesta:
-{
-  "tipo": "recetas",
-  "respuesta": "¡Te paso una receta rica y fácil con arroz y huevo! 🍳",
-  "receta": "Hacés un arroz hervido, lo salteás con huevo batido, cebolla y salsa de soja. ¡Y listo!",
-  "ingredientes": ["arroz", "huevo", "cebolla", "salsa de soja"]
-}
-
-💬 Usuario: qué podés hacer  
-👉 Respuesta:
+// Ayuda:
 {
   "tipo": "ayuda",
-  "respuesta": "Estoy acá para ayudarte con tus compras 😊",
-  "info": "Podés escribirme cosas como 'ofertas de aceite', 'necesito leche', o 'dame una receta con atún'."
+  "info": "Soy tu asistente Carrefour. Podés pedirme productos, recetas o promociones 😊"
 }
 
-💬 Usuario: quiero hacer una tarta  
-👉 Respuesta:
-{
-  "tipo": "recetas",
-  "respuesta": "¡Vamos con una tarta fácil y deliciosa! 🥧",
-  "receta": "Estirá una masa de tarta, agregá relleno de verdura, huevo y queso. Horneá 35 min a 180°C.",
-  "ingredientes": ["masa de tarta", "espinaca", "huevo", "queso"]
-}
-
----
-
-💡 ANTE LA DUDA:
-Si no estás 100 % seguro de la intención del usuario, devolvé tipo: "ayuda" y ofrecé ejemplos útiles como en los casos anteriores.
+IMPORTANTE:
+- No agregues texto fuera del JSON.
+- NO EXPLIQUES nada.
+- El mensaje del usuario es: """${mensaje}"""
 `;
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "openai/gpt-3.5-turbo", // Modelo más confiable
+        model: "openrouter/gpt-3.5-turbo",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: mensaje }
@@ -114,40 +80,23 @@ Si no estás 100 % seguro de la intención del usuario, devolvé tipo: "ayuda" y
     });
 
     const data = await response.json();
-    let content = data.choices?.[0]?.message?.content?.trim();
+    const content = data.choices?.[0]?.message?.content;
 
-    if (!content) {
-      return res.status(200).json({
-        tipo: "ayuda",
-        info: "Soy tu asistente Carrefour. Podés pedirme productos, recetas o promociones 😊"
-      });
+    if (!content) return res.status(500).json({ error: "Sin respuesta", detalle: data });
+
+    let raw = content.trim();
+    if (raw.startsWith("```json")) {
+      raw = raw.replace(/^```json/, "").replace(/```$/, "").trim();
     }
 
-    // Limpiar bloque ```json si lo hay
-    content = content.replace(/^```json/, '').replace(/```$/, '').trim();
-
-    let parsed;
     try {
-      parsed = JSON.parse(content);
+      const json = JSON.parse(raw);
+      return res.status(200).json(json);
     } catch (e) {
-      console.warn("Falla al parsear. Respuesta original:", content);
-      return res.status(200).json({
-        tipo: "ayuda",
-        info: "Podés buscar productos, pedir una receta o consultar promociones 🛒"
-      });
+      return res.status(500).json({ error: "JSON inválido", raw });
     }
 
-    // Validación mínima
-    if (!parsed.tipo || (!parsed.respuesta && !parsed.info)) {
-      return res.status(200).json({
-        tipo: "ayuda",
-        info: "Estoy acá para ayudarte. ¿Querés buscar productos, recetas o promos? 😊"
-      });
-    }
-
-    return res.status(200).json(parsed);
   } catch (err) {
-    console.error("Error en chatbot:", err);
     return res.status(500).json({ error: "Error interno", detalle: err.message });
   }
 };
